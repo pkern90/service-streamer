@@ -12,10 +12,7 @@ import pytest
 
 BATCH_SIZE = 2
 
-if torch.cuda.is_available():
-    device = "cuda"
-else:
-    device = "cpu"  # in case ci environment do not have gpu
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class ManagedVisionDensenetModel(ManagedModel):
@@ -98,7 +95,7 @@ class TestClass(object):
         streamer = ThreadedStreamer(self.vision_model.batch_prediction, batch_size=8)
 
         xs = []
-        for i in range(BATCH_SIZE):
+        for _ in range(BATCH_SIZE):
             future = streamer.submit(self.input_batch)
             xs.append(future)
         batch_predict = []
