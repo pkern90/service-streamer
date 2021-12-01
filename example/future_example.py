@@ -26,14 +26,14 @@ def main():
     print('model prediction time', t_end - t_start)
 
     t_start = time.time()
-    for i in tqdm(range(num_epochs)):
+    for _ in tqdm(range(num_epochs)):
         output = model.predict([text] * batch_size)
     t_end = time.time()
     print('[batched]sentences per second', total_steps / (t_end - t_start))
 
     t_start = time.time()
     xs = []
-    for i in range(total_steps):
+    for _ in range(total_steps):
         future = streamer.submit([text])
         xs.append(future)
 

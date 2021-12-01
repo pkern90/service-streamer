@@ -47,10 +47,7 @@ class Future(object):
 
         # [(request_id, output), ...] sorted by request_id
         self._outputs.sort(key=lambda i: i[0])
-        # restore batch result from outputs
-        batch_result = [i[1] for i in self._outputs]
-
-        return batch_result
+        return [i[1] for i in self._outputs]
 
     def done(self):
         if self._finish_event.is_set():
@@ -93,16 +90,11 @@ class _BaseStreamer(object):
         # task id in one client
         task_id = self._task_id
         self._task_id += 1
-        # request id in one task
-        request_id = 0
-
         future = Future(task_id, len(batch), weakref.ref(self._future_cache))
         self._future_cache[task_id] = future
 
-        for model_input in batch:
+        for request_id, model_input in enumerate(batch):
             self._send_request(task_id, request_id, model_input)
-            request_id += 1
-
         return task_id
 
     def _loop_collect_result(self):
@@ -119,18 +111,15 @@ class _BaseStreamer(object):
 
     def _output(self, task_id: int) -> List:
         future = self._future_cache[task_id]
-        batch_result = future.result(WORKER_TIMEOUT)
-        return batch_result
+        return future.result(WORKER_TIMEOUT)
 
     def submit(self, batch):
         task_id = self._input(batch)
-        future = self._future_cache[task_id]
-        return future
+        return self._future_cache[task_id]
 
     def predict(self, batch):
         task_id = self._input(batch)
-        ret = self._output(task_id)
-        return ret
+        return self._output(task_id)
 
     def destroy_workers(self):
         raise NotImplementedError
@@ -160,13 +149,12 @@ class _BaseStreamWorker(object):
         logger.info("[gpu worker %d] %s shutdown" % (self._pid, self))
 
     def model_predict(self, batch_input):
-        batch_result = self._predict(batch_input)
-        return batch_result
+        return self._predict(batch_input)
 
     def _run_once(self):
         batch = []
         start_time = time.time()
-        for i in range(self._batch_size):
+        for _ in range(self._batch_size):
             try:
                 item = self._recv_request(timeout=self._max_latency)
             except TimeoutError:
